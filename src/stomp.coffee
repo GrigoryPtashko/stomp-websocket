@@ -244,7 +244,7 @@ class Client
   connect: (args...) ->
     out = @_parseConnect(args...)
     [headers, @connectCallback, errorCallback] = out
-    @debug? "Opening Web Socket..."
+#    @debug? "Opening Web Socket..."
     @ws.onmessage = (evt) =>
       data = if typeof(ArrayBuffer) != 'undefined' and evt.data instanceof ArrayBuffer
         # the data is stored inside an ArrayBuffer, we decode it to get the
@@ -319,11 +319,11 @@ class Client
       @debug?(msg)
       @_cleanUp()
       errorCallback?(msg)
-    @ws.onopen    = =>
-      @debug?('Web Socket Opened...')
-      headers["accept-version"] = Stomp.VERSIONS.supportedVersions()
-      headers["heart-beat"] = [@heartbeat.outgoing, @heartbeat.incoming].join(',')
-      @_transmit "CONNECT", headers
+#    @ws.onopen    = =>
+#    @debug?('Web Socket Opened...')
+    headers["accept-version"] = Stomp.VERSIONS.supportedVersions()
+    headers["heart-beat"] = [@heartbeat.outgoing, @heartbeat.incoming].join(',')
+    @_transmit "CONNECT", headers
 
   # [DISCONNECT Frame](http://stomp.github.com/stomp-specification-1.1.html#DISCONNECT)
   disconnect: (disconnectCallback, headers={}) ->
@@ -361,6 +361,26 @@ class Client
     client = this
     return {
       id: headers.id
+
+      unsubscribe: ->
+        client.unsubscribe headers.id
+    }
+
+  sendForSubscribe: (destination, callback, headers={}, send=true, body='') ->
+    # for convenience if the `id` header is not set, we create a new one for this client
+    # that will be returned to be able to unsubscribe this subscription
+    unless headers.id
+      headers.id = "sub-" + @counter++
+    headers.destination = destination
+    @subscriptions[headers.id] = callback
+    command = if send then "SEND" else "SUBSCRIBE"
+    @_transmit command, headers, body
+    client = this
+    return {
+      id: headers.id
+      headers: headers
+      body: body
+      callback: callback
 
       unsubscribe: ->
         client.unsubscribe headers.id
@@ -468,6 +488,9 @@ class Client
     headers["message-id"] = messageID
     headers.subscription = subscription
     @_transmit "NACK", headers
+
+  getServerActivity: () ->
+    return @serverActivity
 
 # ##The `Stomp` Object
 Stomp =
