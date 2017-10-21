@@ -176,11 +176,12 @@ class Client
     # *WebSocket* frames
     while(true)
       if out.length > @maxWebSocketFrameSize
-        @ws.send(out.substring(0, @maxWebSocketFrameSize))
+        outPart = out.substring(0, @maxWebSocketFrameSize)
+        @ws.send((new Uint8Array([].map.call(outPart, (x) -> x.charCodeAt(0)))).buffer)
         out = out.substring(@maxWebSocketFrameSize)
         @debug? "remaining = " + out.length
       else
-        return @ws.send(out)
+          return @ws.send((new Uint8Array([].map.call(out, (x) -> x.charCodeAt(0)))).buffer)
 
   # Heart-beat negotiation
   _setupHeartbeat: (headers) ->
@@ -197,7 +198,7 @@ class Client
       # The `Stomp.setInterval` is a wrapper to handle regular callback
       # that depends on the runtime environment (Web browser or node.js app)
       @pinger = Stomp.setInterval ttl, =>
-        @ws.send Byte.LF
+        @ws.send (new Uint8Array([].map.call(Byte.LF, (x) -> x.charCodeAt(0)))).buffer
         @debug? ">>> PING"
 
     unless @heartbeat.incoming == 0 or serverOutgoing == 0
