@@ -364,7 +364,7 @@ class Client
       id: headers.id
 
       unsubscribe: ->
-        client.unsubscribe headers.id
+        client.unsubscribe headers.id, headers.destination
     }
 
   sendForSubscribe: (destination, callback, headers={}, send=true, body='') ->
@@ -384,7 +384,7 @@ class Client
       callback: callback
 
       unsubscribe: ->
-        client.unsubscribe headers.id
+        client.unsubscribe headers.id, headers.destination
     }
 
   # [UNSUBSCRIBE Frame](http://stomp.github.com/stomp-specification-1.1.html#UNSUBSCRIBE)
@@ -397,10 +397,12 @@ class Client
   #     var subscription = client.subscribe(destination, onmessage);
   #     ...
   #     subscription.unsubscribe();
-  unsubscribe: (id) ->
+  unsubscribe: (id, destination) ->
     delete @subscriptions[id]
     @_transmit "UNSUBSCRIBE", {
       id: id
+
+      destination: destination
     }
 
   # [BEGIN Frame](http://stomp.github.com/stomp-specification-1.1.html#BEGIN)
