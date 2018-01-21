@@ -33,8 +33,8 @@ task 'test', 'Run the tests', ->
 
 task 'build', 'Build source and tests', ->
   invoke 'build:src'
-  invoke 'build:min'
-  invoke 'build:test'
+  # invoke 'build:min'
+  # invoke 'build:test'
 
 task 'build:src', 'Build the src files into lib', ->
   util.log "Compiling src..."

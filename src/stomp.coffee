@@ -163,11 +163,11 @@ class Client
   #     };
   debug: (message) ->
     window?.console?.log message
-      
+
   # Utility method to get the current timestamp (Date.now is not defined in IE8)
   now= ->
     if Date.now then Date.now() else new Date().valueOf
-  
+
   # Base method to transmit any stomp frame
   _transmit: (command, headers, body) ->
     out = Frame.marshall(command, headers, body)
@@ -177,11 +177,21 @@ class Client
     while(true)
       if out.length > @maxWebSocketFrameSize
         outPart = out.substring(0, @maxWebSocketFrameSize)
-        @ws.send((new Uint8Array([].map.call(outPart, (x) -> x.charCodeAt(0)))).buffer)
-        out = out.substring(@maxWebSocketFrameSize)
-        @debug? "remaining = " + out.length
+        if @ws.readyState == WebSocket.OPEN
+          @ws.send((new Uint8Array([].map.call(outPart, (x) -> x.charCodeAt(0)))).buffer)
+          out = out.substring(@maxWebSocketFrameSize)
+          @debug? "remaining = " + out.length
+        else
+          @debug? "wrong ws readyState 1"
+          errorCallback?("wrong ws readyState 1")
+          break
       else
-          return @ws.send((new Uint8Array([].map.call(out, (x) -> x.charCodeAt(0)))).buffer)
+          if @ws.readyState == WebSocket.OPEN
+            return @ws.send((new Uint8Array([].map.call(out, (x) -> x.charCodeAt(0)))).buffer)
+          else
+            @debug? "wrong ws readyState 2"
+            errorCallback?("wrong ws readyState 2")
+            return
 
   # Heart-beat negotiation
   _setupHeartbeat: (headers) ->
@@ -198,8 +208,12 @@ class Client
       # The `Stomp.setInterval` is a wrapper to handle regular callback
       # that depends on the runtime environment (Web browser or node.js app)
       @pinger = Stomp.setInterval ttl, =>
-        @ws.send (new Uint8Array([].map.call(Byte.LF, (x) -> x.charCodeAt(0)))).buffer
-        @debug? ">>> PING"
+        if @ws.readyState == WebSocket.OPEN
+          @ws.send (new Uint8Array([].map.call(Byte.LF, (x) -> x.charCodeAt(0)))).buffer
+          @debug? ">>> PING"
+        else
+          @debug? "wrong ws readyState 3"
+          errorCallback?("wrong ws readyState 3")
 
     unless @heartbeat.incoming == 0 or serverOutgoing == 0
       ttl = Math.max(@heartbeat.incoming, serverOutgoing)
